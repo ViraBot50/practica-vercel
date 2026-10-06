@@ -1,69 +1,194 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client";
+
+import { useEffect, useState } from "react";
 
 export default function Home() {
+  const [productos, setProductos] = useState([]);
+  const [error, setError] = useState("");
+  const [logs, setLogs] = useState([]);
+  const [cargando, setCargando] = useState(false);
+
+  async function cargar() {
+    const inicio = performance.now();
+    setCargando(true);
+
+    try {
+      const res = await fetch("/api/productos");
+      const data = await res.json();
+      const ms = Math.round(performance.now() - inicio);
+
+      setLogs((prev) => [
+        {
+          hora: new Date().toLocaleTimeString(),
+          metodo: "GET",
+          url: "/api/productos",
+          status: res.status,
+          ms,
+          respuesta: data,
+        },
+        ...prev,
+      ].slice(0, 20));
+
+      if (!res.ok) {
+        setError(data?.error || "Error al cargar los productos");
+        return;
+      }
+
+      setError("");
+      setProductos(data);
+    } catch {
+      setError("No se pudo conectar con la API");
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  useEffect(() => {
+    cargar();
+  }, []);
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>
-            To get started, edit the{" "}
-            <code className={styles.code}>page.js</code> file.
-          </h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <main className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8 font-sans">
+      <div className="mx-auto max-w-4xl space-y-8">
+        
+        {/* Encabezado */}
+        <header className="border-b border-slate-200 pb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
+              CRUD de Productos
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Práctica de Git, Next.js, Supabase y Vercel
+            </p>
+          </div>
+          
+          <button
+            onClick={cargar}
+            disabled={cargando}
+            className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors disabled:opacity-50"
           >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+            {cargando ? "Cargando..." : "Recargar Productos"}
+          </button>
+        </header>
+
+        {/* Sección de Productos */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-slate-800">
+                Productos registrados
+              </h2>
+              <p className="text-xs text-slate-500">
+                Productos obtenidos en tiempo real desde Supabase
+              </p>
+            </div>
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
+              {productos.length} {productos.length === 1 ? "producto" : "productos"}
+            </span>
+          </div>
+
+          {error && (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              ⚠️ {error}
+            </div>
+          )}
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            {productos.map((producto) => (
+              <article
+                key={producto.id}
+                className="flex flex-col justify-between rounded-xl bg-white p-5 shadow-xs border border-slate-200 hover:shadow-md transition-shadow"
+              >
+                <div>
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="font-semibold text-slate-900 text-lg">
+                      {producto.nombre}
+                    </h3>
+                    <span className="inline-block rounded-lg bg-slate-100 px-2.5 py-1 text-sm font-bold text-slate-800">
+                      ${Number(producto.precio).toFixed(2)}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm text-slate-600 leading-relaxed">
+                    {producto.descripcion}
+                  </p>
+                </div>
+
+                <div className="mt-4 border-t border-slate-100 pt-3 flex justify-between items-center text-xs text-slate-400">
+                  <span>ID: {producto.id}</span>
+                  {producto.created_at && (
+                    <span>
+                      {new Date(producto.created_at).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+
+          {productos.length === 0 && !error && !cargando && (
+            <div className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-slate-500">
+              No hay productos registrados.
+            </div>
+          )}
+        </section>
+
+        {/* Consola de Peticiones */}
+        <section className="space-y-4 pt-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-slate-800">
+                Consola de peticiones
+              </h2>
+              <p className="text-xs text-slate-500">
+                Historial de solicitudes realizadas a la API
+              </p>
+            </div>
+
+            <button
+              onClick={() => setLogs([])}
+              className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+            >
+              Limpiar consola
+            </button>
+          </div>
+
+          <div className="max-h-96 overflow-y-auto rounded-xl bg-slate-900 p-4 font-mono text-xs text-slate-200 shadow-inner">
+            {logs.length === 0 ? (
+              <p className="text-slate-500 italic">Sin peticiones registradas aún.</p>
+            ) : (
+              logs.map((log, index) => (
+                <div
+                  key={index}
+                  className="mb-4 border-b border-slate-800 pb-4 last:mb-0 last:border-0 last:pb-0 space-y-2"
+                >
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className="text-slate-400">{log.hora}</span>
+                    <span className="rounded bg-amber-500/10 px-1.5 py-0.5 font-bold text-amber-400 border border-amber-500/20">
+                      {log.metodo}
+                    </span>
+                    <span className="text-slate-300">{log.url}</span>
+                    <span
+                      className={`rounded px-1.5 py-0.5 font-bold ${
+                        log.status < 400
+                          ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                          : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                      }`}
+                    >
+                      {log.status}
+                    </span>
+                    <span className="text-slate-400">{log.ms} ms</span>
+                  </div>
+
+                  <pre className="overflow-x-auto rounded-lg bg-slate-950 p-3 text-slate-300 text-[11px] leading-relaxed">
+                    {JSON.stringify(log.respuesta, null, 2)}
+                  </pre>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+
+      </div>
+    </main>
   );
 }
