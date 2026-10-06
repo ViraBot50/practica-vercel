@@ -47,3 +47,39 @@ export async function PUT(request, { params }) {
     );
   }
 }
+
+export async function DELETE(request, { params }) {
+  try {
+    const { id } = await params;
+
+    const { data, error } = await supabase
+      .from("productos")
+      .delete()
+      .eq("id", id)
+      .select();
+
+    if (error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
+
+    if (!data || data.length === 0) {
+      return NextResponse.json(
+        { error: "Producto no encontrado" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(
+      { mensaje: "Producto eliminado correctamente", producto: data[0] },
+      { status: 200 }
+    );
+  } catch {
+    return NextResponse.json(
+      { error: "Error al eliminar el producto" },
+      { status: 500 }
+    );
+  }
+}
