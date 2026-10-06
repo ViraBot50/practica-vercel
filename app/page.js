@@ -214,7 +214,7 @@ export default function Home() {
         <header className="border-b border-slate-200 pb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
-              CRUD de Productos
+              CRUD de Productos - José Brayan
             </h1>
             <p className="mt-1 text-sm text-slate-500">
               Práctica de Git, Next.js, Supabase y Vercel
