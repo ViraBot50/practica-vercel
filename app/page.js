@@ -7,6 +7,12 @@ export default function Home() {
   const [error, setError] = useState("");
   const [logs, setLogs] = useState([]);
   const [cargando, setCargando] = useState(false);
+  const [nombre, setNombre] = useState("");
+  const [precio, setPrecio] = useState("");
+  const [descripcion, setDescripcion] = useState("");
+  const [creando, setCreando] = useState(false);
+
+
 
   async function cargar() {
     const inicio = performance.now();
@@ -43,6 +49,59 @@ export default function Home() {
     }
   }
 
+  async function crearProducto(e) {
+    e.preventDefault();
+
+    setCreando(true);
+    setError("");
+
+    try {
+      const inicio = performance.now();
+
+      const res = await fetch("/api/productos", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          nombre,
+          precio: Number(precio),
+          descripcion,
+        }),
+      });
+
+      const data = await res.json();
+      const ms = Math.round(performance.now() - inicio);
+
+      setLogs((prev) => [
+        {
+          hora: new Date().toLocaleTimeString(),
+          metodo: "POST",
+          url: "/api/productos",
+          status: res.status,
+          ms,
+          respuesta: data,
+        },
+        ...prev,
+      ].slice(0, 20));
+
+      if (!res.ok) {
+        setError(data?.error || "Error al crear el producto");
+        return;
+      }
+
+      setNombre("");
+      setPrecio("");
+      setDescripcion("");
+
+      await cargar();
+    } catch {
+      setError("No se pudo conectar con la API");
+    } finally {
+      setCreando(false);
+    }
+  }
+
   useEffect(() => {
     cargar();
   }, []);
@@ -50,7 +109,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8 font-sans">
       <div className="mx-auto max-w-4xl space-y-8">
-        
+
         {/* Encabezado */}
         <header className="border-b border-slate-200 pb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
@@ -61,7 +120,7 @@ export default function Home() {
               Práctica de Git, Next.js, Supabase y Vercel
             </p>
           </div>
-          
+
           <button
             onClick={cargar}
             disabled={cargando}
@@ -70,7 +129,69 @@ export default function Home() {
             {cargando ? "Cargando..." : "Recargar Productos"}
           </button>
         </header>
+        {/* Formulario para crear productos */}
+        <section className="rounded-xl bg-white p-6 shadow-sm border border-slate-200">
+          <h2 className="text-xl font-bold text-slate-800">
+            Crear producto
+          </h2>
 
+          <p className="mt-1 text-sm text-slate-500">
+            Registra un nuevo producto en Supabase
+          </p>
+
+          <form onSubmit={crearProducto} className="mt-5 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700">
+                Nombre
+              </label>
+              <input
+                type="text"
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
+                placeholder="Ej. Teclado gamer"
+                required
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700">
+                Precio
+              </label>
+              <input
+                type="number"
+                value={precio}
+                onChange={(e) => setPrecio(e.target.value)}
+                placeholder="Ej. 850"
+                min="0"
+                step="0.01"
+                required
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700">
+                Descripción
+              </label>
+              <textarea
+                value={descripcion}
+                onChange={(e) => setDescripcion(e.target.value)}
+                placeholder="Describe el producto"
+                rows="3"
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={creando}
+              className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors disabled:opacity-50"
+            >
+              {creando ? "Creando..." : "Crear producto"}
+            </button>
+          </form>
+        </section>
         {/* Sección de Productos */}
         <section className="space-y-4">
           <div className="flex items-center justify-between">
@@ -89,7 +210,7 @@ export default function Home() {
 
           {error && (
             <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-              ⚠️ {error}
+              {error}
             </div>
           )}
 
@@ -168,11 +289,10 @@ export default function Home() {
                     </span>
                     <span className="text-slate-300">{log.url}</span>
                     <span
-                      className={`rounded px-1.5 py-0.5 font-bold ${
-                        log.status < 400
-                          ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                          : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
-                      }`}
+                      className={`rounded px-1.5 py-0.5 font-bold ${log.status < 400
+                        ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                        : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                        }`}
                     >
                       {log.status}
                     </span>
