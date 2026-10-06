@@ -11,7 +11,8 @@ export default function Home() {
   const [precio, setPrecio] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [creando, setCreando] = useState(false);
-
+  const [editando, setEditando] = useState(null);
+  const [actualizando, setActualizando] = useState(false);
 
 
   async function cargar() {
@@ -102,6 +103,61 @@ export default function Home() {
     }
   }
 
+
+  async function actualizarProducto(e) {
+    e.preventDefault();
+
+    setActualizando(true);
+    setError("");
+
+    try {
+      const inicio = performance.now();
+
+      const res = await fetch(`/api/productos/${editando}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          nombre,
+          precio: Number(precio),
+          descripcion,
+        }),
+      });
+
+      const data = await res.json();
+      const ms = Math.round(performance.now() - inicio);
+
+      setLogs((prev) => [
+        {
+          hora: new Date().toLocaleTimeString(),
+          metodo: "PUT",
+          url: `/api/productos/${editando}`,
+          status: res.status,
+          ms,
+          respuesta: data,
+        },
+        ...prev,
+      ].slice(0, 20));
+
+      if (!res.ok) {
+        setError(data?.error || "Error al actualizar el producto");
+        return;
+      }
+
+      setEditando(null);
+      setNombre("");
+      setPrecio("");
+      setDescripcion("");
+
+      await cargar();
+    } catch {
+      setError("No se pudo conectar con la API");
+    } finally {
+      setActualizando(false);
+    }
+  }
+
   useEffect(() => {
     cargar();
   }, []);
@@ -132,14 +188,19 @@ export default function Home() {
         {/* Formulario para crear productos */}
         <section className="rounded-xl bg-white p-6 shadow-sm border border-slate-200">
           <h2 className="text-xl font-bold text-slate-800">
-            Crear producto
+            {editando ? "Editar producto" : "Crear producto"}
           </h2>
 
           <p className="mt-1 text-sm text-slate-500">
-            Registra un nuevo producto en Supabase
+            {editando
+              ? "Modifica los datos del producto seleccionado"
+              : "Registra un nuevo producto en Supabase"}
           </p>
 
-          <form onSubmit={crearProducto} className="mt-5 space-y-4">
+          <form
+            onSubmit={editando ? actualizarProducto : crearProducto}
+            className="mt-5 space-y-4"
+          >
             <div>
               <label className="block text-sm font-medium text-slate-700">
                 Nombre
@@ -185,11 +246,32 @@ export default function Home() {
 
             <button
               type="submit"
-              disabled={creando}
+              disabled={creando || actualizando}
               className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors disabled:opacity-50"
             >
-              {creando ? "Creando..." : "Crear producto"}
+              {actualizando
+                ? "Guardando cambios..."
+                : creando
+                  ? "Creando..."
+                  : editando
+                    ? "Guardar cambios"
+                    : "Crear producto"}
             </button>
+            {editando && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditando(null);
+                  setNombre("");
+                  setPrecio("");
+                  setDescripcion("");
+                  setError("");
+                }}
+                className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                Cancelar
+              </button>
+            )}
           </form>
         </section>
         {/* Sección de Productos */}
@@ -234,13 +316,29 @@ export default function Home() {
                   </p>
                 </div>
 
-                <div className="mt-4 border-t border-slate-100 pt-3 flex justify-between items-center text-xs text-slate-400">
-                  <span>ID: {producto.id}</span>
-                  {producto.created_at && (
-                    <span>
-                      {new Date(producto.created_at).toLocaleDateString()}
-                    </span>
-                  )}
+                <div className="mt-4 border-t border-slate-100 pt-3">
+                  <div className="flex justify-between items-center text-xs text-slate-400">
+                    <span>ID: {producto.id}</span>
+
+                    {producto.created_at && (
+                      <span>
+                        {new Date(producto.created_at).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setEditando(producto.id);
+                      setNombre(producto.nombre);
+                      setPrecio(producto.precio);
+                      setDescripcion(producto.descripcion || "");
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    className="mt-3 w-full rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors"
+                  >
+                    Editar producto
+                  </button>
                 </div>
               </article>
             ))}
