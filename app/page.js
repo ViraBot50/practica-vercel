@@ -158,6 +158,50 @@ export default function Home() {
     }
   }
 
+  async function eliminarProducto(id) {
+    const confirmar = window.confirm(
+      "¿Estás seguro de que deseas eliminar este producto?"
+    );
+
+    if (!confirmar) {
+      return;
+    }
+
+    setError("");
+
+    try {
+      const inicio = performance.now();
+
+      const res = await fetch(`/api/productos/${id}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+      const ms = Math.round(performance.now() - inicio);
+
+      setLogs((prev) => [
+        {
+          hora: new Date().toLocaleTimeString(),
+          metodo: "DELETE",
+          url: `/api/productos/${id}`,
+          status: res.status,
+          ms,
+          respuesta: data,
+        },
+        ...prev,
+      ].slice(0, 20));
+
+      if (!res.ok) {
+        setError(data?.error || "Error al eliminar el producto");
+        return;
+      }
+
+      await cargar();
+    } catch {
+      setError("No se pudo conectar con la API");
+    }
+  }
+
   useEffect(() => {
     cargar();
   }, []);
@@ -327,18 +371,27 @@ export default function Home() {
                     )}
                   </div>
 
-                  <button
-                    onClick={() => {
-                      setEditando(producto.id);
-                      setNombre(producto.nombre);
-                      setPrecio(producto.precio);
-                      setDescripcion(producto.descripcion || "");
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                    }}
-                    className="mt-3 w-full rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors"
-                  >
-                    Editar producto
-                  </button>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => {
+                        setEditando(producto.id);
+                        setNombre(producto.nombre);
+                        setPrecio(producto.precio);
+                        setDescripcion(producto.descripcion || "");
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                      className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors"
+                    >
+                      Editar
+                    </button>
+
+                    <button
+                      onClick={() => eliminarProducto(producto.id)}
+                      className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 transition-colors"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
                 </div>
               </article>
             ))}
